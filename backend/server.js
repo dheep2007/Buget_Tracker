@@ -11,19 +11,29 @@ const goalRoutes = require("./routes/goalRoutes");
 const app = express();
 
 // ---------------------------------------------------------------------------
-// CORS — allow local dev + whatever domain is set as CLIENT_URL in prod.
-// On Vercel the frontend and backend share the same domain (requests go
-// through /api/...), so CORS is only strictly needed for local dev.
-// We keep CLIENT_URL support so the config still works for any external
-// frontend (e.g. a leftover GitHub Pages deployment).
+// CORS — allow local dev + the deployed frontend + any CLIENT_URL override.
+// The frontend (tracker-frontend1.vercel.app) and backend (buget-tracker-theta.vercel.app)
+// are on DIFFERENT domains, so explicit CORS headers are required for every
+// cross-origin request including OPTIONS preflight.
 // ---------------------------------------------------------------------------
-app.use(cors({
-    origin: [
-        "http://localhost:5173",
-        process.env.CLIENT_URL,
-    ].filter(Boolean),
+const allowedOrigins = [
+    "http://localhost:5173",
+    "https://tracker-frontend1.vercel.app", // deployed frontend
+    process.env.CLIENT_URL,                 // optional override via Vercel env var
+].filter(Boolean);
+
+const corsOptions = {
+    origin: allowedOrigins,
     credentials: true,
-}));
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+// Handle OPTIONS preflight requests immediately (must be before other routes)
+app.options("*", cors(corsOptions));
+
+// Apply CORS to all subsequent routes
+app.use(cors(corsOptions));
 
 app.use(express.json());
 
