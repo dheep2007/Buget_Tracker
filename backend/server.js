@@ -24,7 +24,8 @@ const corsOptions = {
 };
 
 // Handle OPTIONS preflight requests immediately (must be before other routes)
-app.options("*", cors(corsOptions));
+// NOTE: Express 5 requires named wildcards — bare "*" throws PathError [TypeError]
+app.options("/*splat", cors(corsOptions));
 
 // Apply CORS to all subsequent routes
 app.use(cors(corsOptions));
