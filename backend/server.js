@@ -10,12 +10,6 @@ const goalRoutes = require("./routes/goalRoutes");
 
 const app = express();
 
-// ---------------------------------------------------------------------------
-// CORS — allow local dev + the deployed frontend + any CLIENT_URL override.
-// The frontend (tracker-frontend1.vercel.app) and backend (buget-tracker-theta.vercel.app)
-// are on DIFFERENT domains, so explicit CORS headers are required for every
-// cross-origin request including OPTIONS preflight.
-// ---------------------------------------------------------------------------
 const allowedOrigins = [
     "http://localhost:5173",
     "https://tracker-frontend1.vercel.app", // deployed frontend
