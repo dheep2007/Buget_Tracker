@@ -3,7 +3,11 @@ const User = require("../models/User");
 
 // Helper: create a token that contains the user's id
 const generateToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET, {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+        throw new Error("JWT_SECRET environment variable is missing in Vercel settings");
+    }
+    return jwt.sign({ id }, secret, {
         expiresIn: process.env.JWT_EXPIRES_IN || "7d",
     });
 };
@@ -36,8 +40,8 @@ const registerUser = async (req, res) => {
             const message = Object.values(error.errors)[0].message;
             return res.status(400).json({ message });
         }
-        console.error(error);
-        res.status(500).json({ message: "Server error" });
+        console.error("Register error:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
     }
 };
 
@@ -68,8 +72,8 @@ const loginUser = async (req, res) => {
             token: generateToken(user._id),
         });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Server error" });
+        console.error("Login error:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
     }
 };
 // @route   GET /api/auth/me

@@ -32,35 +32,65 @@ app.use(cors(corsOptions));
 
 app.use(express.json());
 
-// Health-check (also proves the backend service is reachable)
-app.get("/", (req, res) => {
-    res.json({ status: "ok", message: "Budget Tracker API is running" });
+// ---------------------------------------------------------------------------
+// MongoDB connection — cached promise pattern for serverless environments.
+// On Vercel, requests are handled by ephemeral serverless functions.
+// We must await connectDB() on incoming API requests rather than firing
+// a floating promise at module startup.
+// ---------------------------------------------------------------------------
+let cachedPromise = null;
+
+const connectDB = async () => {
+    if (mongoose.connection.readyState === 1) return;
+    if (!process.env.MONGO_URI) {
+        throw new Error("MONGO_URI is missing from environment variables in Vercel");
+    }
+    if (!cachedPromise) {
+        cachedPromise = mongoose.connect(process.env.MONGO_URI, {
+            serverSelectionTimeoutMS: 5000,
+        }).then((m) => {
+            console.log("MongoDB connected");
+            return m;
+        }).catch((err) => {
+            cachedPromise = null;
+            throw err;
+        });
+    }
+    return cachedPromise;
+};
+
+// Health-check (proves the backend service and reports DB connection & env vars)
+app.get("/", async (req, res) => {
+    const states = ["disconnected", "connected", "connecting", "disconnecting"];
+    res.json({
+        status: "ok",
+        message: "Budget Tracker API is running",
+        database: {
+            state: states[mongoose.connection.readyState] || "unknown",
+            hasMongoUri: Boolean(process.env.MONGO_URI),
+            hasJwtSecret: Boolean(process.env.JWT_SECRET),
+        },
+    });
+});
+
+// Middleware: ensure MongoDB is connected before handling any /api requests
+app.use(async (req, res, next) => {
+    try {
+        await connectDB();
+        next();
+    } catch (err) {
+        console.error("MongoDB connection failed:", err.message);
+        return res.status(500).json({
+            message: "Database connection failed",
+            error: err.message,
+        });
+    }
 });
 
 app.use("/api/auth", authRoutes);
 app.use("/api/transactions", transactionRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/goals", goalRoutes);
-
-// ---------------------------------------------------------------------------
-// MongoDB connection — initiated here so it is ready as early as possible.
-// We do NOT nest app.listen() inside .then() because on Vercel the module
-// must export 'app' immediately; the DB connects in the background.
-// ---------------------------------------------------------------------------
-let dbConnected = false;
-
-const connectDB = async () => {
-    if (dbConnected) return;
-    try {
-        await mongoose.connect(process.env.MONGO_URI);
-        dbConnected = true;
-        console.log("MongoDB connected");
-    } catch (err) {
-        console.error("MongoDB connection error:", err.message);
-    }
-};
-
-connectDB(); // Start connecting now (non-blocking for the export below)
 
 // ---------------------------------------------------------------------------
 // Local development: start the HTTP server only when running with Node directly
