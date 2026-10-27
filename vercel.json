@@ -9,10 +9,7 @@
       "root": "frontend",
       "framework": "vite",
       "buildCommand": "npm install && npm run build",
-      "outputDirectory": "dist",
-      "env": {
-        "VITE_API_URL": "/api"
-      }
+      "outputDirectory": "dist"
     }
   },
   "rewrites": [
