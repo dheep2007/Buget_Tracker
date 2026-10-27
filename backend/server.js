@@ -8,7 +8,14 @@ const transactionRoutes = require("./routes/transactionRoutes");
 
 const app = express();
 
-app.use(cors());
+// Allow requests from local dev and the deployed GitHub Pages frontend
+app.use(cors({
+    origin: [
+        'http://localhost:5173',
+        process.env.CLIENT_URL,
+    ].filter(Boolean), // remove undefined if CLIENT_URL is not set
+    credentials: true,
+}));
 app.use(express.json()); // lets Express read JSON sent in request bodies
 
 app.get("/", (req, res) => {
